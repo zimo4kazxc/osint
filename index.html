@@ -1,0 +1,1205 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OSINT &amp; Doxing — практическое руководство</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#0d0f12;--bg-alt:#14171c;--bg-card:#181c22;--bg-hover:#1e232b;
+--border:#262c36;--border-hi:#3a4351;
+--text:#d4d9e0;--text-dim:#8b939e;--text-mute:#5c6470;
+--accent:#4a9eff;--accent-dim:#2d6bb5;
+--green:#3ddc84;--red:#ff5c5c;--yellow:#ffcc44;--orange:#ff9944;--purple:#b47aff;
+--sidebar-w:290px;--max-w:820px;
+--mono:'JetBrains Mono','Fira Code',Consolas,monospace;
+--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+}
+html{scroll-behavior:smooth;scroll-padding-top:24px}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.7;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:var(--sidebar-w);background:var(--bg-alt);border-right:1px solid var(--border);position:fixed;top:0;left:0;bottom:0;overflow-y:auto;z-index:100;transition:transform .25s ease}
+.sidebar::-webkit-scrollbar{width:6px}
+.sidebar::-webkit-scrollbar-thumb{background:var(--border-hi);border-radius:3px}
+.sidebar-head{padding:20px 20px 14px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg-alt);z-index:2}
+.sidebar-head h1{font-size:16px;font-weight:700;color:#fff}
+.sidebar-head h1 span{color:var(--accent)}
+.sidebar-head p{font-size:10.5px;color:var(--text-mute);margin-top:4px;text-transform:uppercase;letter-spacing:1.4px;font-weight:600}
+.sidebar-search{padding:10px 14px;border-bottom:1px solid var(--border);position:sticky;top:70px;background:var(--bg-alt);z-index:2}
+.sidebar-search input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:7px 11px;color:var(--text);font-size:13px;font-family:var(--sans);outline:none}
+.sidebar-search input:focus{border-color:var(--accent-dim)}
+.nav-group{padding:6px 0}
+.nav-group-label{font-size:10px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text-mute);font-weight:700;padding:12px 20px 5px}
+.nav-link{display:block;padding:5px 20px 5px 22px;color:var(--text-dim);text-decoration:none;font-size:13px;border-left:2px solid transparent;transition:all .12s}
+.nav-link:hover{color:var(--text);background:var(--bg-hover)}
+.nav-link.active{color:var(--accent);border-left-color:var(--accent);background:rgba(74,158,255,.06);font-weight:600}
+.nav-link .num{display:inline-block;width:20px;color:var(--text-mute);font-family:var(--mono);font-size:11px}
+.main{margin-left:var(--sidebar-w);flex:1;min-width:0}
+.content{max-width:var(--max-w);margin:0 auto;padding:44px 40px 120px}
+.menu-toggle{display:none;position:fixed;top:14px;left:14px;z-index:200;background:var(--bg-card);border:1px solid var(--border-hi);border-radius:8px;width:42px;height:42px;color:var(--text);font-size:20px;cursor:pointer;align-items:center;justify-content:center}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:99}
+h2.section-title{font-size:29px;font-weight:800;letter-spacing:-.5px;color:#fff;margin:0 0 6px;padding-top:38px;scroll-margin-top:24px}
+h2.section-title:first-child{padding-top:0}
+.section-kicker{font-size:11.5px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);font-weight:700;margin-bottom:5px}
+.section-desc{color:var(--text-dim);font-size:15px;margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--border)}
+h3{font-size:20px;font-weight:700;color:#fff;margin:36px 0 12px;scroll-margin-top:24px}
+h4{font-size:16px;font-weight:700;color:var(--text);margin:24px 0 8px}
+h5{font-size:13px;font-weight:700;color:var(--text-dim);margin:18px 0 6px;text-transform:uppercase;letter-spacing:.8px}
+p{margin:0 0 13px}
+a{color:var(--accent);text-decoration:none}
+a:hover{text-decoration:underline}
+ul,ol{margin:0 0 14px;padding-left:24px}
+li{margin-bottom:5px}
+li::marker{color:var(--text-mute)}
+strong{color:#fff}
+em{color:var(--text-dim);font-style:italic}
+code{font-family:var(--mono);font-size:12.5px;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;padding:1px 6px;color:var(--orange)}
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:10px;padding:20px 22px;margin:18px 0}
+.card-title{font-size:12px;text-transform:uppercase;letter-spacing:1.2px;font-weight:700;color:var(--accent);margin-bottom:10px}
+.callout{border-radius:8px;padding:14px 18px;margin:18px 0;border-left:3px solid;font-size:14.5px}
+.callout.info{background:rgba(74,158,255,.07);border-color:var(--accent)}
+.callout.warn{background:rgba(255,204,68,.07);border-color:var(--yellow)}
+.callout.danger{background:rgba(255,92,92,.07);border-color:var(--red)}
+.callout.tip{background:rgba(61,220,132,.07);border-color:var(--green)}
+.callout.opsec{background:rgba(180,122,255,.07);border-color:var(--purple)}
+.callout-title{font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:6px}
+.callout.info .callout-title{color:var(--accent)}
+.callout.warn .callout-title{color:var(--yellow)}
+.callout.danger .callout-title{color:var(--red)}
+.callout.tip .callout-title{color:var(--green)}
+.callout.opsec .callout-title{color:var(--purple)}
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+th{color:var(--text-dim);font-size:11.5px;text-transform:uppercase;letter-spacing:1px;font-weight:700}
+td{color:var(--text)}
+tr:hover td{background:var(--bg-hover)}
+pre{background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:14px 16px;overflow-x:auto;margin:14px 0}
+pre code{background:none;border:none;padding:0;color:var(--text);font-size:12.5px;line-height:1.6}
+.hero{background:linear-gradient(135deg,rgba(74,158,255,.08),rgba(180,122,255,.05));border:1px solid var(--border);border-radius:12px;padding:32px 28px;margin-bottom:36px}
+.hero h1{font-size:32px;font-weight:800;color:#fff;letter-spacing:-.8px;margin-bottom:10px}
+.hero p{color:var(--text-dim);font-size:16px;margin:0}
+.badge{display:inline-block;font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:3px 9px;border-radius:20px;margin-right:6px}
+.badge-blue{background:rgba(74,158,255,.15);color:var(--accent)}
+.badge-green{background:rgba(61,220,132,.15);color:var(--green)}
+.badge-red{background:rgba(255,92,92,.15);color:var(--red)}
+.badge-purple{background:rgba(180,122,255,.15);color:var(--purple)}
+.badge-yellow{background:rgba(255,204,68,.15);color:var(--yellow)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+@media(max-width:900px){
+.sidebar{transform:translateX(-100%)}
+.sidebar.open{transform:translateX(0)}
+.menu-toggle{display:flex}
+.overlay.show{display:block}
+.main{margin-left:0}
+.content{padding:72px 22px 100px}
+.grid{grid-template-columns:1fr}
+h2.section-title{font-size:24px}
+.hero h1{font-size:25px}
+}
+.hidden{display:none !important}
+.search-hi{background:rgba(255,204,68,.25);border-radius:2px}
+footer{margin-top:60px;padding-top:24px;border-top:1px solid var(--border);color:var(--text-mute);font-size:13px}
+</style>
+</head>
+<body>
+
+<button class="menu-toggle" id="menuToggle" aria-label="Меню">☰</button>
+<div class="overlay" id="overlay"></div>
+
+<div class="layout">
+
+<!-- ================= SIDEBAR ================= -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-head">
+    <h1>OSINT<span>&amp;Doxing</span></h1>
+    <p>Практическое руководство</p>
+  </div>
+  <div class="sidebar-search">
+    <input type="text" id="searchInput" placeholder="Поиск по разделам…">
+  </div>
+  <nav id="nav">
+    <div class="nav-group">
+      <div class="nav-group-label">Основы</div>
+      <a class="nav-link" data-target="s1"><span class="num">01</span>Введение в OSINT</a>
+      <a class="nav-link" data-target="s2"><span class="num">02</span>OPSEC исследователя</a>
+      <a class="nav-link" data-target="s3"><span class="num">03</span>Инфраструктура</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Сбор данных</div>
+      <a class="nav-link" data-target="s4"><span class="num">04</span>Footprinting</a>
+      <a class="nav-link" data-target="s5"><span class="num">05</span>SOCMINT</a>
+      <a class="nav-link" data-target="s6"><span class="num">06</span>Юзернейм-энумерация</a>
+      <a class="nav-link" data-target="s7"><span class="num">07</span>Email и телефон</a>
+      <a class="nav-link" data-target="s8"><span class="num">08</span>Домены и IP</a>
+      <a class="nav-link" data-target="s9"><span class="num">09</span>Геолокация</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Артефакты</div>
+      <a class="nav-link" data-target="s10"><span class="num">10</span>Метаданные</a>
+      <a class="nav-link" data-target="s11"><span class="num">11</span>Изображения и видео</a>
+      <a class="nav-link" data-target="s12"><span class="num">12</span>Утечки данных</a>
+      <a class="nav-link" data-target="s13"><span class="num">13</span>People-search</a>
+      <a class="nav-link" data-target="s14"><span class="num">14</span>Корпоративные реестры</a>
+      <a class="nav-link" data-target="s15"><span class="num">15</span>Тулинг</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Доксинг</div>
+      <a class="nav-link" data-target="s16"><span class="num">16</span>Пайплайн доксинга</a>
+      <a class="nav-link" data-target="s17"><span class="num">17</span>Составление досье</a>
+      <a class="nav-link" data-target="s18"><span class="num">18</span>Контр-OSINT</a>
+    </div>
+  </nav>
+</aside>
+
+<!-- ================= MAIN ================= -->
+<main class="main">
+<div class="content">
+
+<div class="hero">
+  <h1>OSINT &amp; Doxing</h1>
+  <p>Полный практический курс: от открытых источников до готового досье. Методология, тулинг, OPSEC, пайплайн.</p>
+</div>
+
+<!-- ===== 1 ===== -->
+<h2 class="section-title" id="s1">01 · Введение в OSINT</h2>
+<div class="section-kicker">Основы</div>
+<p class="section-desc">Что такое разведка по открытым источникам, чем она отличается от доксинга, и как устроен цикл сбора.</p>
+
+<h3>Определение</h3>
+<p><strong>OSINT</strong> (Open Source Intelligence) — разведка по открытым источникам. Это сбор и анализ информации из публично доступных источников: веб-страниц, соцсетей, реестров, баз данных, медиа, метаданных. Источник считается открытым, если доступ к нему не требует взлома, обхода авторизации или нарушения закона.</p>
+<p><strong>Доксинг</strong> — это финальная стадия: агрегация собранных данных в персональное досье и его публикация. Технически доксинг = OSINT + агрегация + деанонимизация. Разница между ними — в цели: OSINT отвечает на вопрос «что можно узнать», доксинг — «кто это и где живёт».</p>
+
+<div class="callout info">
+  <div class="callout-title">Ключевой принцип</div>
+  OSINT работает только с <strong>открытыми</strong> источниками. Всё, что требует пароля, взлома или подкупа — вне метода. Это не мораль, это определение.
+</div>
+
+<h3>Цикл разведки</h3>
+<ol>
+  <li><strong>Постановка задачи</strong> — что именно мы ищем: имя, ник, домен, аккаунт, местоположение.</li>
+  <li><strong>Планирование</strong> — какие источники релевантны, какие инструменты, какой бюджет времени.</li>
+  <li><strong>Сбор</strong> — первичный «широкий заброс»: поисковики, соцсети, реестры.</li>
+  <li><strong>Обработка</strong> — нормализация: единый формат, дедупликация, извлечение сущностей.</li>
+  <li><strong>Анализ</strong> — связывание сущностей, проверка гипотез, поиск противоречий.</li>
+  <li><strong>Отчёт</strong> — досье, таймлайн, граф связей, выводы с уровнем уверенности.</li>
+</ol>
+
+<h3>Типы источников</h3>
+<table>
+  <tr><th>Тип</th><th>Примеры</th><th>Ценность</th></tr>
+  <tr><td>Поисковики</td><td>Google, Bing, Yandex, DuckDuckGo</td><td>Высокая — точка входа</td></tr>
+  <tr><td>Соцсети</td><td>VK, Telegram, Instagram, X</td><td>Очень высокая — личные данные</td></tr>
+  <tr><td>Реестры</td><td>ЕГРЮЛ, WHOIS, судебные базы</td><td>Высокая — официальные данные</td></tr>
+  <tr><td>Утечки</td><td>HaveIBeenPwned, DeHashed</td><td>Средняя — устаревшие данные</td></tr>
+  <tr><td>Медиа</td><td>Фото, видео, EXIF</td><td>Высокая — геолокация, время</td></tr>
+  <tr><td>Архивы</td><td>Wayback Machine, archive.today</td><td>Средняя — удалённое</td></tr>
+</table>
+
+<h3>Юридическая рамка</h3>
+<p>В большинстве юрисдикций сбор открытой информации сам по себе не преступен. Преступным становится: обход авторизации, доступ к закрытым данным, преследование (stalking), шантаж, публикация данных с целью причинения вреда. Разделяй <em>сбор</em> и <em>применение</em>.</p>
+
+<!-- ===== 2 ===== -->
+<h2 class="section-title" id="s2">02 · OPSEC исследователя</h2>
+<div class="section-kicker">Основы</div>
+<p class="section-desc">Как не оставить следов и не сжечь себя в процессе сбора.</p>
+
+<h3>Почему OPSEC критичен</h3>
+<p>Каждый твой запрос — это след. Поисковики логируют IP, соцсети связывают аккаунты, сайты читают User-Agent. Если исследуешь кого-то, а он заметит интерес — сбор провален. OPSEC — это гигиена.</p>
+
+<h3>Уровни изоляции</h3>
+<div class="card">
+  <div class="card-title">Базовый</div>
+  <ul>
+    <li>Отдельный браузер для OSINT (не основной).</li>
+    <li>VPN с оплатой криптой, не логирующий.</li>
+    <li>Отключённые cookies, JavaScript через NoScript где возможно.</li>
+    <li>Отдельный профиль почты без привязки к телефону.</li>
+  </ul>
+</div>
+<div class="card">
+  <div class="card-title">Продвинутый</div>
+  <ul>
+    <li>Изолированная VM (Whonix, Tails) для чувствительных сессий.</li>
+    <li>Tor для источников, где важна анонимность.</li>
+    <li>Отдельные «персоны-приманки» для соцсетей.</li>
+    <li>Разные IP для разных этапов.</li>
+  </ul>
+</div>
+
+<div class="callout opsec">
+  <div class="callout-title">Правило одной персоны</div>
+  Каждая задача — отдельная персона. Не смешивай почту, ник, стиль письма между задачами. Перекрёстная корреляция — самый частый способ сжечь себя.
+</div>
+
+<h3>Артефакты, которые ты оставляешь</h3>
+<ul>
+  <li><strong>IP</strong> — виден любому серверу.</li>
+  <li><strong>User-Agent</strong> — версия ОС и браузера.</li>
+  <li><strong>Cookies</strong> — связывают сессии.</li>
+  <li><strong>Referer</strong> — откуда пришёл.</li>
+  <li><strong>Время</strong> — часовой пояс по активности.</li>
+  <li><strong>Стиль</strong> — лексика, опечатки, эмодзи.</li>
+  <li><strong>Метаданные файлов</strong> — если отправляешь документы.</li>
+</ul>
+
+<h3>Гигиена аккаунтов</h3>
+<p>Разделяй аккаунты по задачам. Никогда не используй личный email для регистраций в OSINT-сервисах. Не переиспользуй пароли. Для каждого сервиса — своя почта-однодневка (SimpleLogin, AnonAddy).</p>
+
+<!-- ===== 3 ===== -->
+<h2 class="section-title" id="s3">03 · Инфраструктура</h2>
+<div class="section-kicker">Основы</div>
+<p class="section-desc">Что нужно подготовить до начала работы: рабочие станции, почты, браузеры, хранилища.</p>
+
+<h3>Рабочая станция</h3>
+<table>
+  <tr><th>Компонент</th><th>Зачем</th></tr>
+  <tr><td>VM с Kali/Parrot</td><td>Тулинг из коробки</td></tr>
+  <tr><td>Whonix / Tails</td><td>Анонимность</td></tr>
+  <tr><td>Отдельный браузер</td><td>Изоляция профиля</td></tr>
+  <tr><td>Зашифрованный диск</td><td>Хранение данных</td></tr>
+</table>
+
+<h3>Почты и идентичности</h3>
+<ul>
+  <li><strong>ProtonMail / Tutanota</strong> — анонимные ящики.</li>
+  <li><strong>SimpleLogin / AnonAddy</strong> — алиасы.</li>
+  <li><strong>Виртуальные номера</strong> — для верификаций (не для злоупотреблений).</li>
+</ul>
+
+<h3>Хранилище и организация</h3>
+<p>OSINT — это про объёмы. Нужна структура:</p>
+<pre><code>case/
+├── 01_raw/          # сырые данные
+├── 02_normalized/   # приведённые к единому виду
+├── 03_analysis/     # аналитика
+├── 04_report/       # финальное досье
+├── media/           # фото, видео
+├── logs/            # журнал действий
+└── sources.md       # таблица источников</code></pre>
+
+<div class="callout tip">
+  <div class="callout-title">Журнал действий</div>
+  Веди лог: что, когда, где искал, что нашёл. Без него через сутки ты не вспомнишь, откуда взялась та или иная зацепка.
+</div>
+
+<h3>Тулинг первой необходимости</h3>
+<ul>
+  <li><strong>Sherlock / Maigret</strong> — поиск юзернеймов.</li>
+  <li><strong>theHarvester / Amass</strong> — сбор по домену.</li>
+  <li><strong>Maltego</strong> — графы связей.</li>
+  <li><strong>ExifTool</strong> — метаданные.</li>
+  <li><strong>Recon-ng</strong> — фреймворк.</li>
+  <li><strong>SpiderFoot</strong> — автоматизация.</li>
+</ul>
+
+<!-- ===== 4 ===== -->
+<h2 class="section-title" id="s4">04 · Footprinting</h2>
+<div class="section-kicker">Сбор данных</div>
+<p class="section-desc">Первичный широкий сбор: что известно о цели из открытых источников.</p>
+
+<h3>Что такое footprinting</h3>
+<p>Footprinting — это «отпечаток» цели в открытых источниках. Задача — собрать максимально широкий срез до углубления в детали.</p>
+
+<h3>Поисковые операторы</h3>
+<table>
+  <tr><th>Оператор</th><th>Действие</th></tr>
+  <tr><td><code>site:</code></td><td>Поиск по конкретному сайту</td></tr>
+  <tr><td><code>filetype:</code></td><td>Тип файла (pdf, xlsx, doc)</td></tr>
+  <tr><td><code>intitle:</code></td><td>Слово в заголовке</td></tr>
+  <tr><td><code>inurl:</code></td><td>Слово в URL</td></tr>
+  <tr><td><code>intext:</code></td><td>Слово в тексте</td></tr>
+  <tr><td><code>"…"</code></td><td>Точная фраза</td></tr>
+  <tr><td><code>OR / |</code></td><td>Альтернатива</td></tr>
+  <tr><td><code>-</code></td><td>Исключение</td></tr>
+  <tr><td><code>..</code></td><td>Диапазон чисел</td></tr>
+  <tr><td><code>cache:</code></td><td>Кэш страницы</td></tr>
+</table>
+
+<h3>Примеры запросов</h3>
+<pre><code>site:example.com filetype:pdf
+intitle:"index of" "backup"
+inurl:admin login
+"Иван Петров" site:vk.com
+filetype:xlsx "контакты" "телефон"</code></pre>
+
+<h3>Google Dorks</h3>
+<p>Комбинации операторов, нацеленные на утечки и открытые директории. Классика жанра:</p>
+<ul>
+  <li>Открытые листинги директорий: <code>intitle:"index of"</code>.</li>
+  <li>Конфиги: <code>filetype:env</code>, <code>filetype:conf</code>.</li>
+  <li>Таблицы: <code>filetype:xlsx intext:@gmail.com</code>.</li>
+  <li>Бэкапы: <code>filetype:sql</code>, <code>filetype:bak</code>.</li>
+</ul>
+
+<h3>Другие поисковики</h3>
+<ul>
+  <li><strong>Bing</strong> — иногда находит то, что Google пропустил.</li>
+  <li><strong>Yandex</strong> — силён по русскоязычному сегменту.</li>
+  <li><strong>DuckDuckGo</strong> — без персонализации.</li>
+  <li><strong>Shodan / Censys</strong> — поиск по устройствам и сервисам.</li>
+  <li><strong>FOFA / ZoomEye</strong> — аналоги Shodan.</li>
+  <li><strong>Wayback Machine</strong> — история страниц.</li>
+</ul>
+
+<div class="callout info">
+  <div class="callout-title">Сначала ширина, потом глубина</div>
+  Не углубляйся в первый же найденный след. Сначала собери все зацепки, потом ранжируй их по значимости.
+</div>
+
+<!-- ===== 5 ===== -->
+<h2 class="section-title" id="s5">05 · SOCMINT</h2>
+<div class="section-kicker">Сбор данных</div>
+<p class="section-desc">Разведка по социальным сетям — самый богатый источник персональных данных.</p>
+
+<h3>Почему соцсети — золото</h3>
+<p>Люди сами публикуют: имя, фото, геолокацию, круг общения, работу, интересы, распорядок дня. Соцсети — это добровольный дамп персональных данных.</p>
+
+<h3>Что искать в профиле</h3>
+<ul>
+  <li><strong>Имя и псевдонимы</strong> — включая девичью фамилию.</li>
+  <li><strong>Дата рождения</strong> — часто в постах-поздравлениях.</li>
+  <li><strong>География</strong> — геотеги, чекины, фон фото.</li>
+  <li><strong>Работа</strong> — компании, должности, коллеги.</li>
+  <li><strong>Образование</strong> — школы, вузы, выпуски.</li>
+  <li><strong>Семья</strong> — родственники в друзьях.</li>
+  <li><strong>Привычки</strong> — спортзал, кафе, маршруты.</li>
+  <li><strong>Техника</strong> — по фото и постам.</li>
+  <li><strong>Питомцы</strong> — клички часто = пароли.</li>
+</ul>
+
+<h3>Платформы и специфика</h3>
+<table>
+  <tr><th>Платформа</th><th>Что даёт</th></tr>
+  <tr><td>VK</td><td>Полные профили, музыка, группы, друзья</td></tr>
+  <tr><td>Telegram</td><td>Каналы, чаты, юзернеймы, номер</td></tr>
+  <tr><td>Instagram</td><td>Визуал, сторис, геотеги, связи</td></tr>
+  <tr><td>X (Twitter)</td><td>Мнения, связи, ретвиты, время</td></tr>
+  <tr><td>Facebook</td><td>Семья, события, работа</td></tr>
+  <tr><td>LinkedIn</td><td>Карьера, коллеги, навыки</td></tr>
+  <tr><td>TikTok</td><td>Молодая аудитория, локации</td></tr>
+  <tr><td>GitHub</td><td>Email в коммитах, проекты, стек</td></tr>
+</table>
+
+<h3>Методика анализа профиля</h3>
+<ol>
+  <li>Сохрани профиль (архив, скриншоты).</li>
+  <li>Выпиши все видимые поля: имя, ник, bio, ссылки.</li>
+  <li>Пройди по фото: фон, геотеги, отражения, тени.</li>
+  <li>Изучи друзей: общие связи = подтверждение личности.</li>
+  <li>Пройди по лайкам и комментариям: интересы, связи.</li>
+  <li>Найди ранние посты: часто там больше личного.</li>
+  <li>Проверь архивы: удалённое часто сохранилось.</li>
+</ol>
+
+<div class="callout warn">
+  <div class="callout-title">Не пались</div>
+  Не заходи в профиль со своего основного аккаунта — увидишься в «просмотрах». Используй отдельную персону или публичный просмотр.
+</div>
+
+<h3>Инструменты SOCMINT</h3>
+<ul>
+  <li><strong>Social Searcher</strong> — поиск по соцсетям.</li>
+  <li><strong>Instaloader</strong> — выгрузка Instagram.</li>
+  <li><strong>TGStat</strong> — статистика Telegram-каналов.</li>
+  <li><strong>Twint-архивы</strong> — старые твиты.</li>
+  <li><strong>SNScrape</strong> — скрейпинг соцсетей.</li>
+</ul>
+
+<!-- ===== 6 ===== -->
+<h2 class="section-title" id="s6">06 · Юзернейм-энумерация</h2>
+<div class="section-kicker">Сбор данных</div>
+<p class="section-desc">Один ник — сотни платформ. Как найти все аккаунты человека по псевдониму.</p>
+
+<h3>Логика метода</h3>
+<p>Люди переиспользуют ники. Если цель использует <code>shadow_wolf</code> на одной платформе — с высокой вероятностью тот же ник есть и на других. Задача — проверить все платформы разом.</p>
+
+<h3>Инструменты</h3>
+<table>
+  <tr><th>Инструмент</th><th>Тип</th></tr>
+  <tr><td>Sherlock</td><td>CLI, Python</td></tr>
+  <tr><td>Maigret</td><td>CLI, Python, подробный отчёт</td></tr>
+  <tr><td>WhatsMyName</td><td>Веб-база</td></tr>
+  <tr><td>Namechk</td><td>Веб</td></tr>
+  <tr><td>KnowEm</td><td>Веб, коммерческий</td></tr>
+  <tr><td>Snoop</td><td>CLI</td></tr>
+</table>
+
+<h3>Sherlock — пример запуска</h3>
+<pre><code>git clone https://github.com/sherlock-project/sherlock
+cd sherlock
+pip install -r requirements.txt
+python3 sherlock shadow_wolf --timeout 2
+# вывод: список платформ с найденными профилями</code></pre>
+
+<h3>Maigret — расширенный вариант</h3>
+<pre><code>pip install maigret
+maigret shadow_wolf --html
+# генерирует HTML-отчёт со всеми найденными аккаунтами,
+# включая извлечённые данные: bio, аватар, доп. ссылки</code></pre>
+
+<h3>Что делать с результатом</h3>
+<ul>
+  <li>Отфильтруй ложные срабатывания (проверь каждый профиль вручную).</li>
+  <li>Свяжи аккаунты по аватару, bio, дате регистрации.</li>
+  <li>Проверь пересечения: одни и те же подписчики = один человек.</li>
+  <li>Извлеки новые сущности: email в bio, ссылки на другие соцсети.</li>
+</ul>
+
+<div class="callout tip">
+  <div class="callout-title">Мульти-ник</div>
+  Цель может использовать несколько ников. Собери все варианты и прогоняй каждый. Пересечение результатов по платформам = подтверждение.
+</div>
+
+<h3>Вариации и деформации</h3>
+<p>Пробуй:</p>
+<ul>
+  <li>Замены: <code>_</code>, <code>.</code>, <code>-</code>.</li>
+  <li>Числа: год рождения, 007, 1337.</li>
+  <li>Регистр: ShadowWolf, shadowwolf, SHADOW_WOLF.</li>
+  <li>Латиница/кириллица: визуальные двойники.</li>
+  <li>Усечения: shadow, wolf, sw.</li>
+</ul>
+
+<!-- ===== 7 ===== -->
+<h2 class="section-title" id="s7">07 · Email и телефон</h2>
+<div class="section-kicker">Сбор данных</div>
+<p class="section-desc">Как из email или номера вытащить максимум: аккаунты, утечки, соцсети.</p>
+
+<h3>Email как ключ</h3>
+<p>Email — это якорь цифровой личности. С него регистрируются аккаунты, на него приходят чеки, он светится в утечках.</p>
+
+<h3>Что можно узнать из email</h3>
+<ul>
+  <li>Зарегистрированные аккаунты (через сброс пароля).</li>
+  <li>Участие в утечках (HaveIBeenPwned).</li>
+  <li>Профиль Gravatar (аватар, доп. данные).</li>
+  <li>Связанные сервисы (через сервисы проверки).</li>
+  <li>Имя владельца (из формата <code>ivan.petrov@…</code>).</li>
+  <li>Домен компании (если корпоративный).</li>
+</ul>
+
+<h3>Инструменты</h3>
+<table>
+  <tr><th>Инструмент</th><th>Функция</th></tr>
+  <tr><td>HaveIBeenPwned</td><td>Проверка утечек</td></tr>
+  <tr><td>DeHashed</td><td>Поиск по утечкам (платно)</td></tr>
+  <tr><td>Hunter.io</td><td>Корпоративные email</td></tr>
+  <tr><td>Holehe</td><td>Проверка регистраций по email</td></tr>
+  <tr><td>EmailRep</td><td>Репутация email</td></tr>
+  <tr><td>Gravatar</td><td>Профиль по email-хешу</td></tr>
+</table>
+
+<h3>Holehe — пример</h3>
+<pre><code>pip install holehe
+holehe target@example.com
+# проверяет ~120 сервисов, показывает где email зарегистрирован</code></pre>
+
+<h3>Телефон как ключ</h3>
+<p>Номер — ещё более сильный якорь: он привязан к аккаунтам, банкам, мессенджерам. В РФ номер часто = паспорт.</p>
+
+<h3>Что можно узнать из номера</h3>
+<ul>
+  <li>Оператор и регион (по префиксу).</li>
+  <li>Аккаунты Telegram/WhatsApp (через добавление в контакты).</li>
+  <li>Аватар и имя в мессенджерах.</li>
+  <li>Привязка к соцсетям (поиск по номеру в VK/OK).</li>
+  <li>Утечки (номер часто в базах).</li>
+</ul>
+
+<h3>Инструменты</h3>
+<ul>
+  <li><strong>NumLookup / Truecaller</strong> — определение.</li>
+  <li><strong>GetContact</strong> — как записан в чужих контактах.</li>
+  <li><strong>PhoneInfoga</strong> — OSINT по номеру.</li>
+  <li><strong>Telegram</strong> — добавь номер в контакты, посмотри профиль.</li>
+  <li><strong>WhatsApp/Instagram</strong> — проверка регистрации.</li>
+</ul>
+
+<div class="callout opsec">
+  <div class="callout-title">Не жги номер</div>
+  Проверка номера в мессенджерах оставляет след. Делай это с отдельного аккаунта/номера.
+</div>
+
+<h3>Связка email + телефон</h3>
+<p>Часто email и телефон взаимно подтверждают друг друга. Найди один — проверь второй. Совпадение = высокая уверенность.</p>
+
+<!-- ===== 8 ===== -->
+<h2 class="section-title" id="s8">08 · Домены и IP</h2>
+<div class="section-kicker">Сбор данных</div>
+<p class="section-desc">Инфраструктурная разведка: кто стоит за доменом, какие сервисы, какие утечки.</p>
+
+<h3>WHOIS</h3>
+<p>WHOIS даёт регистратора, даты регистрации/обновления, иногда контакты (часто скрыты приватностью).</p>
+<pre><code>whois example.com
+# Registrar, Creation Date, Name Servers, Registrant (если открыт)</code></pre>
+
+<h3>DNS</h3>
+<p>DNS-записи раскрывают инфраструктуру: почта, поддомены, сервисы.</p>
+<pre><code>dig example.com ANY
+dig +short mx example.com
+dig +short txt example.com
+host -t ns example.com</code></pre>
+
+<h3>Поддомены</h3>
+<p>Поддомены — часто забытые, незащищённые сервисы (dev, staging, admin).</p>
+<ul>
+  <li><strong>Amass</strong> — пассивный и активный enum.</li>
+  <li><strong>Subfinder</strong> — быстрый пассивный enum.</li>
+  <li><strong>crt.sh</strong> — Certificate Transparency логи.</li>
+  <li><strong>dnsdumpster</strong> — веб-визуализация.</li>
+</ul>
+<pre><code>amass enum -passive -d example.com
+subfinder -d example.com -o subs.txt
+curl -s "https://crt.sh/?q=%25.example.com&output=json" | jq -r '.[].name_value'</code></pre>
+
+<h3>IP и Shodan</h3>
+<p>По IP можно узнать открытые порты, сервисы, версии, иногда — устройство.</p>
+<pre><code>nmap -sV -p- target_ip
+shodan search hostname:example.com
+censys search example.com</code></pre>
+
+<h3>Certificate Transparency</h3>
+<p>Каждый выданный SSL-сертификат логируется. CT-логи — золотая жила для поиска поддоменов и связанных доменов.</p>
+<ul>
+  <li>crt.sh</li>
+  <li>CertStream</li>
+  <li>Facebook CT Monitor</li>
+</ul>
+
+<h3>Архивы и история</h3>
+<ul>
+  <li><strong>Wayback Machine</strong> — старая версия сайта.</li>
+  <li><strong>archive.today</strong> — снимки страниц.</li>
+  <li><strong>urlscan.io</strong> — сканы и скриншоты.</li>
+</ul>
+
+<div class="callout info">
+  <div class="callout-title">Пассивно vs активно</div>
+  Пассивный сбор (CT-логи, архивы) не касается целевого сервера. Активный (nmap, сканеры) — касается. Второе заметно, делай только в рамках легального скоупа.
+</div>
+
+<h3>Утечки инфраструктуры</h3>
+<ul>
+  <li>Открытые S3-бакеты.</li>
+  <li>Открытые Git-репозитории с .env.</li>
+  <li>Открытые Kibana/Elasticsearch.</li>
+  <li>Открытые Jenkins/CI.</li>
+  <li>Открытые базы (MongoDB, Redis).</li>
+</ul>
+
+<!-- ===== 9 ===== -->
+<h2 class="section-title" id="s9">09 · Геолокация</h2>
+<div class="section-kicker">Сбор данных</div>
+<p class="section-desc">Как по фото, видео и тексту определить место. Основной навык доксинга.</p>
+
+<h3>GeoOSINT — что это</h3>
+<p>Геолокация по открытым данным: определение координат по изображению, видео, постам, метаданным. Основной метод — визуальные ориентиры + сопоставление с картами.</p>
+
+<h3>Методика по фото</h3>
+<ol>
+  <li>Найди уникальные ориентиры: вывески, здания, памятники.</li>
+  <li>Определи язык вывесок — регион.</li>
+  <li>Определи сторону света по теням и солнцу.</li>
+  <li>Сопоставь с Google Maps / Yandex Maps / Bing.</li>
+  <li>Используй Street View для подтверждения.</li>
+  <li>Проверь по спутниковым снимкам.</li>
+</ol>
+
+<h3>Инструменты</h3>
+<table>
+  <tr><th>Инструмент</th><th>Назначение</th></tr>
+  <tr><td>Google Maps / Earth</td><td>Базовый поиск</td></tr>
+  <tr><td>Yandex Maps</td><td>РФ, СНГ</td></tr>
+  <tr><td>Bing Maps</td><td>Альтернатива</td></tr>
+  <tr><td>OpenStreetMap</td><td>Открытые данные</td></tr>
+  <tr><td>SunCalc</td><td>Позиция солнца по времени</td></tr>
+  <tr><td>PeakVisor</td><td>Горы и хребты</td></tr>
+  <tr><td>Overpass Turbo</td><td>Запросы по OSM</td></tr>
+  <tr><td>Mapillary</td><td>Краудсорсные панорамы</td></tr>
+</table>
+
+<h3>Работа с тенями</h3>
+<p>Тень даёт три вещи: время суток, направление на север, высоту солнца. По этим данным можно определить широту и время. SunCalc — онлайн-инструмент, покажет положение солнца для любой точки и времени.</p>
+
+<h3>По видеозаписи</h3>
+<ul>
+  <li>Покадровый разбор: вывески, номера, одежда.</li>
+  <li>Фон: архитектура, растительность, рельеф.</li>
+  <li>Звук: язык, акцент, шумы (поезда, трамваи).</li>
+  <li>Движение: направление, скорость, время.</li>
+</ul>
+
+<h3>Геолокация по соцсетям</h3>
+<ul>
+  <li>Геотеги в постах и сторис.</li>
+  <li>Фон фото (кафе, спортзал, офис).</li>
+  <li>Чекины в VK/Facebook.</li>
+  <li>Упоминания мест в текстах.</li>
+  <li>Отметки друзей.</li>
+</ul>
+
+<div class="callout tip">
+  <div class="callout-title">Три подтверждения</div>
+  Не публикуй геолокацию, пока не получил три независимых подтверждения: ориентир, карта, контекст.
+</div>
+
+<h3>Определение по метаданным</h3>
+<p>EXIF фото может содержать GPS-координаты. См. раздел «Метаданные».</p>
+
+<!-- ===== 10 ===== -->
+<h2 class="section-title" id="s10">10 · Метаданные</h2>
+<div class="section-kicker">Артефакты</div>
+<p class="section-desc">Скрытые данные в файлах: GPS, устройство, дата, автор, ПО.</p>
+
+<h3>Что такое метаданные</h3>
+<p>Метаданные — это служебная информация файла. Для фото — EXIF, для документов — свойства Office, для PDF — автор и ПО.</p>
+
+<h3>Что можно вытащить</h3>
+<ul>
+  <li><strong>GPS-координаты</strong> — точное место съёмки.</li>
+  <li><strong>Дата и время</strong> — когда сделано.</li>
+  <li><strong>Устройство</strong> — модель камеры/телефона.</li>
+  <li><strong>ПО</strong> — чем редактировали.</li>
+  <li><strong>Автор</strong> — имя в свойствах Office/PDF.</li>
+  <li><strong>История правок</strong> — для документов.</li>
+</ul>
+
+<h3>Инструменты</h3>
+<table>
+  <tr><th>Инструмент</th><th>Назначение</th></tr>
+  <tr><td>ExifTool</td><td>Универсальный</td></tr>
+  <tr><td>Exif Pilot</td><td>Windows GUI</td></tr>
+  <tr><td>Metagoofil</td><td>Сбор метаданных с сайта</td></tr>
+  <tr><td>FOCA</td><td>Анализ документов</td></tr>
+  <tr><td>pdfinfo</td><td>Метаданные PDF</td></tr>
+  <tr><td>strings</td><td>Строки внутри бинарника</td></tr>
+</table>
+
+<h3>ExifTool — примеры</h3>
+<pre><code>exiftool photo.jpg
+exiftool -a -u -g1 photo.jpg
+exiftool -gps:all photo.jpg
+exiftool -csv -r ./photos > meta.csv</code></pre>
+
+<h3>Metagoofil — сбор документов с сайта</h3>
+<pre><code>metagoofil -d example.com -t pdf,doc,xlsx -l 100 -o ./docs
+# скачивает документы и вытаскивает метаданные</code></pre>
+
+<div class="callout warn">
+  <div class="callout-title">Соцсети чистят EXIF</div>
+  Большинство соцсетей удаляют EXIF при загрузке. Но: оригиналы в мессенджерах (Telegram «файлом»), email-вложениях, файлообменниках — сохраняют.
+</div>
+
+<h3>Своя гигиена</h3>
+<p>Перед публикацией своих файлов — чисти метаданные: <code>exiftool -all= file.jpg</code>. Это защита от обратной геолокации.</p>
+
+<!-- ===== 11 ===== -->
+<h2 class="section-title" id="s11">11 · Изображения и видео</h2>
+<div class="section-kicker">Артефакты</div>
+<p class="section-desc">Обратный поиск, распознавание, анализ визуальных данных.</p>
+
+<h3>Обратный поиск изображений</h3>
+<ul>
+  <li><strong>Google Images</strong> — базовый.</li>
+  <li><strong>Yandex Images</strong> — силён по лицам и РФ.</li>
+  <li><strong>Bing Visual Search</strong> — альтернатива.</li>
+  <li><strong>TinEye</strong> — точные совпадения, история.</li>
+  <li><strong>PimEyes</strong> — поиск по лицу (платно).</li>
+  <li><strong>FaceCheck.ID</strong> — поиск по лицу.</li>
+</ul>
+
+<h3>Методика</h3>
+<ol>
+  <li>Обрежь фото до ключевого объекта.</li>
+  <li>Ищи по нескольким фрагментам.</li>
+  <li>Пробуй на нескольких поисковиках.</li>
+  <li>Проверь на дубликаты (TinEye).</li>
+  <li>Проверь на «стоковые» (может быть не оригинал).</li>
+</ol>
+
+<h3>Анализ визуала</h3>
+<ul>
+  <li>Отражения в стекле/зеркале.</li>
+  <li>Тени и их направление.</li>
+  <li>Номера машин, вывески.</li>
+  <li>Одежда с логотипами.</li>
+  <li>Домашний интерьер (уникальные предметы).</li>
+  <li>Растительность (регион).</li>
+  <li>Погода (сверка с архивами).</li>
+</ul>
+
+<h3>Видео</h3>
+<ul>
+  <li>Покадровое извлечение: <code>ffmpeg -i video.mp4 frame_%04d.png</code>.</li>
+  <li>Извлечение звука: <code>ffmpeg -i video.mp4 -vn audio.wav</code>.</li>
+  <li>Анализ фона, движения, языка.</li>
+  <li>Поиск по кадрам через Google/Yandex.</li>
+</ul>
+
+<h3>Deepfake и подделки</h3>
+<p>Проверяй: артефакты по краям лица, неестественные волосы, асимметрия, шум. Инструменты: InVID, Forensically, FotoForensics.</p>
+
+<div class="callout info">
+  <div class="callout-title">InVID</div>
+  Плагин для проверки видео: разбивка на кадры, обратный поиск, метаданные, анализ манипуляций.
+</div>
+
+<!-- ===== 12 ===== -->
+<h2 class="section-title" id="s12">12 · Утечки данных</h2>
+<div class="section-kicker">Артефакты</div>
+<p class="section-desc">Что делать с утёкшими базами: как искать, как проверять, как использовать.</p>
+
+<h3>Типы утечек</h3>
+<ul>
+  <li><strong>Credential dumps</strong> — email + пароль.</li>
+  <li><strong>PII dumps</strong> — ФИО, адрес, телефон, паспорт.</li>
+  <li><strong>Corporate leaks</strong> — внутренние документы.</li>
+  <li><strong>Forum dumps</strong> — посты, личные сообщения.</li>
+  <li><strong>Combolists</strong> — комбинации email:пароль.</li>
+</ul>
+
+<h3>Где искать</h3>
+<ul>
+  <li><strong>HaveIBeenPwned</strong> — легально, по email.</li>
+  <li><strong>DeHashed</strong> — платный агрегатор.</li>
+  <li><strong>LeakCheck</strong> — платный.</li>
+  <li><strong>IntelligenceX</strong> — коммерческая разведка.</li>
+  <li><strong>Публичные трекеры</strong> — там, где индексируются базы.</li>
+</ul>
+
+<h3>HaveIBeenPwned — пример</h3>
+<pre><code># Через API
+curl -s "https://haveibeenpwned.com/api/v3/breachedaccount/user@example.com" \
+  -H "hibp-api-key: YOUR_KEY"</code></pre>
+
+<h3>Что делать с базой</h3>
+<ol>
+  <li>Нормализуй: приведи к единому формату.</li>
+  <li>Дедуплицируй.</li>
+  <li>Извлеки релевантные записи (по цели).</li>
+  <li>Обогати: добавь актуальные данные.</li>
+  <li>Проверь актуальность пароля (не используй — верифицируй старые данные).</li>
+</ol>
+
+<h3>Риски и этика</h3>
+<div class="callout danger">
+  <div class="callout-title">Осторожно</div>
+  Хранение и использование утечек в ряде юрисдикций — нарушение. Использование чужих паролей — преступление. Для защиты — ок. Для атаки — статья.
+</div>
+
+<h3>Защита от утечек</h3>
+<ul>
+  <li>Уникальные пароли для каждого сервиса.</li>
+  <li>Менеджер паролей.</li>
+  <li>2FA везде, где можно.</li>
+  <li>Почта-однодневка для регистраций.</li>
+  <li>Мониторинг утечек (HIBP Notify).</li>
+</ul>
+
+<!-- ===== 13 ===== -->
+<h2 class="section-title" id="s13">13 · People-search</h2>
+<div class="section-kicker">Артефакты</div>
+<p class="section-desc">Специализированные сервисы поиска людей.</p>
+
+<h3>Что это</h3>
+<p>People-search сервисы агрегируют публичные данные о людях: адрес, телефон, родственники, судимости. В основном США/ЕС, но есть и локальные.</p>
+
+<h3>Западные сервисы</h3>
+<ul>
+  <li>Spokeo</li>
+  <li>Pipl</li>
+  <li>Whitepages</li>
+  <li>BeenVerified</li>
+  <li>Intelius</li>
+  <li>TruthFinder</li>
+</ul>
+
+<h3>Регион СНГ</h3>
+<ul>
+  <li>ВКонтакте (поиск по ФИО, городу, вузу).</li>
+  <li>Одноклассники.</li>
+  <li>Судебные базы (sudrf.ru, kad.arbitr.ru).</li>
+  <li>ЕГРЮЛ/ЕГРИП (налог).</li>
+  <li>ФССП (приставы).</li>
+  <li>Госуслуги (только для своих).</li>
+</ul>
+
+<h3>Методика поиска по ФИО</h3>
+<ol>
+  <li>Поиск в соцсетях по ФИО + город.</li>
+  <li>Проверка судебных баз.</li>
+  <li>Проверка реестров юрлиц.</li>
+  <li>Проверка приставов.</li>
+  <li>Проверка через people-search.</li>
+  <li>Сверка с известными данными.</li>
+</ol>
+
+<div class="callout warn">
+  <div class="callout-title">Однофамильцы</div>
+  Всегда проверяй на однофамильцев. Ищи подтверждения: возраст, город, работа. Никогда не публикуй без 2–3 подтверждений.
+</div>
+
+<h3>Родственники и связи</h3>
+<ul>
+  <li>Друзья в соцсетях.</li>
+  <li>Совместные фото.</li>
+  <li>Общие фамилии.</li>
+  <li>Адресные базы.</li>
+  <li>Судебные дела.</li>
+</ul>
+
+<!-- ===== 14 ===== -->
+<h2 class="section-title" id="s14">14 · Корпоративные реестры</h2>
+<div class="section-kicker">Артефакты</div>
+<p class="section-desc">Юрлица, директора, адреса, связи — через официальные реестры.</p>
+
+<h3>Реестры</h3>
+<table>
+  <tr><th>Реестр</th><th>Данные</th></tr>
+  <tr><td>ЕГРЮЛ</td><td>Юрлица РФ</td></tr>
+  <tr><td>ЕГРИП</td><td>ИП РФ</td></tr>
+  <tr><td>Kad.arbitr</td><td>Арбитраж</td></tr>
+  <tr><td>Sudrf</td><td>Суды общей юрисдикции</td></tr>
+  <tr><td>ФССП</td><td>Исполнительные производства</td></tr>
+  <tr><td>ФНС</td><td>Налоги, дисквалификации</td></tr>
+  <tr><td>OpenCorporates</td><td>Международный</td></tr>
+  <tr><td>Companies House</td><td>Великобритания</td></tr>
+  <tr><td>SEC EDGAR</td><td>США</td></tr>
+</table>
+
+<h3>Что можно узнать</h3>
+<ul>
+  <li>Директора и учредители.</li>
+  <li>Юридический адрес.</li>
+  <li>Размер уставного капитала.</li>
+  <li>Виды деятельности.</li>
+  <li>История изменений.</li>
+  <li>Связанные компании.</li>
+  <li>Судебные дела.</li>
+</ul>
+
+<h3>Пример: ЕГРЮЛ</h3>
+<p>Выписка из ЕГРЮЛ содержит: наименование, ИНН, ОГРН, адрес, директора, учредителей, виды деятельности. Стоит копейки, даёт много.</p>
+
+<h3>Граф связей</h3>
+<p>Люди и компании образуют граф. Один человек может быть директором в 10 фирмах. Один адрес — в 50. Эти связи раскрывают структуру бизнеса.</p>
+
+<h3>Инструменты</h3>
+<ul>
+  <li><strong>Малтегo + трансформы</strong> — визуализация связей.</li>
+  <li><strong>OpenCorporates API</strong> — международный поиск.</li>
+  <li><strong>Rusprofile</strong> — РФ, платный.</li>
+  <li><strong>Контур.Фокус</strong> — РФ, платный.</li>
+</ul>
+
+<!-- ===== 15 ===== -->
+<h2 class="section-title" id="s15">15 · Тулинг</h2>
+<div class="section-kicker">Артефакты</div>
+<p class="section-desc">Сводный список инструментов по категориям.</p>
+
+<h3>Поиск</h3>
+<ul>
+  <li>Google / Bing / Yandex / DuckDuckGo</li>
+  <li>Shodan / Censys / FOFA</li>
+  <li>Wayback Machine / archive.today</li>
+  <li>urlscan.io</li>
+</ul>
+
+<h3>Соцсети</h3>
+<ul>
+  <li>Sherlock / Maigret</li>
+  <li>Social Searcher</li>
+  <li>Instaloader</li>
+  <li>TGStat</li>
+  <li>SNScrape</li>
+</ul>
+
+<h3>Инфраструктура</h3>
+<ul>
+  <li>theHarvester / Amass / Subfinder</li>
+  <li>nmap / masscan</li>
+  <li>DNSDumpster / crt.sh</li>
+  <li>WhatWeb / Wappalyzer</li>
+</ul>
+
+<h3>Метаданные</h3>
+<ul>
+  <li>ExifTool / Exif Pilot</li>
+  <li>Metagoofil / FOCA</li>
+  <li>pdfinfo / strings</li>
+</ul>
+
+<h3>Визуал</h3>
+<ul>
+  <li>Google Images / Yandex / TinEye</li>
+  <li>PimEyes / FaceCheck</li>
+  <li>InVID / Forensically / FotoForensics</li>
+  <li>SunCalc / PeakVisor</li>
+</ul>
+
+<h3>Утечки</h3>
+<ul>
+  <li>HaveIBeenPwned</li>
+  <li>DeHashed / LeakCheck</li>
+  <li>IntelligenceX</li>
+</ul>
+
+<h3>Анализ и визуализация</h3>
+<ul>
+  <li>Maltego</li>
+  <li>Gephi</li>
+  <li>Obsidian / Notion для досье</li>
+  <li>Recon-ng / SpiderFoot</li>
+</ul>
+
+<div class="callout tip">
+  <div class="callout-title">Не собирай зоопарк</div>
+  Десяток инструментов, которые ты знаешь глубоко, лучше сотни, которые ты пробовал раз. Освой базу: поисковики, Sherlock, ExifTool, Maltego.
+</div>
+
+<!-- ===== 16 ===== -->
+<h2 class="section-title" id="s16">16 · Пайплайн доксинга</h2>
+<div class="section-kicker">Доксинг</div>
+<p class="section-desc">Сборка всего предыдущего в единый процесс.</p>
+
+<h3>Общая схема</h3>
+<pre><code>Точка входа → Расширение → Связывание → Верификация → Досье</code></pre>
+
+<h3>Этап 1. Точка входа</h3>
+<p>Один якорь: ник, email, телефон, фото, ФИО. С него начинается всё.</p>
+
+<h3>Этап 2. Расширение</h3>
+<ul>
+  <li>Прогон по всем платформам (Sherlock).</li>
+  <li>Поиск в утечках (HIBP).</li>
+  <li>Поиск в поисковиках (dorks).</li>
+  <li>Соцсети (SOCMINT).</li>
+  <li>Инфраструктура (если есть домен/IP).</li>
+</ul>
+
+<h3>Этап 3. Связывание</h3>
+<p>Собранные сущности связываются между собой:</p>
+<ul>
+  <li>Один аватар на разных платформах.</li>
+  <li>Один email в bio.</li>
+  <li>Один телефон в утечке и в профиле.</li>
+  <li>Общие подписчики.</li>
+  <li>Совпадения по времени активности.</li>
+</ul>
+
+<h3>Этап 4. Верификация</h3>
+<ul>
+  <li>Минимум 2–3 независимых подтверждения.</li>
+  <li>Проверка на однофамильцев.</li>
+  <li>Проверка на фейки.</li>
+  <li>Кросс-датировка событий.</li>
+</ul>
+
+<h3>Этап 5. Досье</h3>
+<p>Финальный документ: см. следующий раздел.</p>
+
+<div class="callout danger">
+  <div class="callout-title">Стоп-линия</div>
+  Публикация персональных данных с целью преследования, шантажа или причинения вреда — уголовно наказуемо. Пайплайн для защиты, аудита, журналистики, правоохраны — да. Для травли — нет.
+</div>
+
+<h3>Автоматизация</h3>
+<ul>
+  <li><strong>Recon-ng</strong> — модульный фреймворк.</li>
+  <li><strong>SpiderFoot</strong> — автоскан по якорю.</li>
+  <li><strong>Maltego</strong> — граф связей в реальном времени.</li>
+  <li>Свои скрипты на Python для нормализации.</li>
+</ul>
+
+<!-- ===== 17 ===== -->
+<h2 class="section-title" id="s17">17 · Составление досье</h2>
+<div class="section-kicker">Доксинг</div>
+<p class="section-desc">Как собрать финальный документ: структура, разделы, таймлайн, граф.</p>
+
+<h3>Структура досье</h3>
+<pre><code>1. Идентификация
+   - ФИО, дата рождения, город
+   - Ники, аккаунты
+   - Контакты (email, телефон)
+
+2. Связи
+   - Семья, друзья, коллеги
+   - Компании, организации
+
+3. Активы
+   - Недвижимость, транспорт
+   - Бизнес, доли, счета
+
+4. Активность
+   - Соцсети, посты, комментарии
+   - Геолокации
+
+5. Хронология
+   - Таймлайн событий
+
+6. Источники
+   - Ссылки, скриншоты, архивы
+
+7. Выводы
+   - С уровнем уверенности</code></pre>
+
+<h3>Таймлайн</h3>
+<p>Все события — в хронологию. Каждое событие: дата, источник, что подтверждает. Таймлайн выявляет паттерны: поездки, работу, отношения.</p>
+
+<h3>Граф связей</h3>
+<p>Узлы — люди, компании, аккаунты, телефоны. Рёбра — связи. Maltego или Gephi для визуализации. Граф показывает структуру окружения цели.</p>
+
+<h3>Уровни уверенности</h3>
+<table>
+  <tr><th>Уровень</th><th>Значение</th></tr>
+  <tr><td>Подтверждено</td><td>2+ независимых источника</td></tr>
+  <tr><td>Вероятно</td><td>1 источник + логика</td></tr>
+  <tr><td>Возможно</td><td>косвенные данные</td></tr>
+  <tr><td>Гипотеза</td><td>предположение</td></tr>
+</table>
+
+<h3>Формат</h3>
+<ul>
+  <li><strong>Markdown</strong> — для работы.</li>
+  <li><strong>PDF</strong> — для финала.</li>
+  <li><strong>HTML</strong> — для публикации.</li>
+  <li><strong>Maltego graph</strong> — для связей.</li>
+</ul>
+
+<div class="callout info">
+  <div class="callout-title">Источники обязательны</div>
+  В досье на каждое утверждение — ссылка или скриншот. Без источника это не досье, это слух.
+</div>
+
+<!-- ===== 18 ===== -->
+<h2 class="section-title" id="s18">18 · Контр-OSINT</h2>
+<div class="section-kicker">Доксинг</div>
+<p class="section-desc">Как защитить себя от того, что описано выше.</p>
+
+<h3>Что о тебе знают</h3>
+<p>Проверь себя тем же набором: Sherlock по своим никам, HIBP по своим email, поисковики по своему имени. То, что найдёшь — увидят и другие.</p>
+
+<h3>Снижение следа</h3>
+<ul>
+  <li><strong>Ники</strong> — уникальные для каждого сервиса.</li>
+  <li><strong>Email</strong> — алиасы (SimpleLogin).</li>
+  <li><strong>Фото</strong> — без EXIF, без геометок.</li>
+  <li><strong>Соцсети</strong> — приватность, чистка старых постов.</li>
+  <li><strong>Пароли</strong> — менеджер + 2FA.</li>
+  <li><strong>Домен</strong> — приватность WHOIS.</li>
+  <li><strong>Телефон</strong> — не привязывать к публичным аккаунтам.</li>
+</ul>
+
+<h3>Цифровая гигиена</h3>
+<ol>
+  <li>Аудит аккаунтов раз в полгода.</li>
+  <li>Удаление старых аккаунтов.</li>
+  <li>Проверка утечек (HIBP).</li>
+  <li>Разделение личного и публичного.</li>
+  <li>Отдельные браузеры для разных задач.</li>
+  <li>Проверка разрешений приложений.</li>
+</ol>
+
+<h3>Удаление данных</h3>
+<ul>
+  <li><strong>Google</strong> — «Удалить устаревший контент».</li>
+  <li><strong>Yandex</strong> — «Удалить из поиска».</li>
+  <li><strong>People-search</strong> — opt-out формы.</li>
+  <li><strong>Соцсети</strong> — удаление старых постов.</li>
+  <li><strong>Сайты</strong> — GDPR-запросы.</li>
+</ul>
+
+<h3>Защита от доксинга</h3>
+<ul>
+  <li>Не публикуй в реальном времени (пост-фактум).</li>
+  <li>Не свети геолокацию.</li>
+  <li>Не используй один ник везде.</li>
+  <li>Не привязывай телефон к публичным аккаунтам.</li>
+  <li>Разделяй рабочие и личные аккаунты.</li>
+  <li>Проверяй, что видно в сторис (фон, отражения).</li>
+</ul>
+
+<div class="callout opsec">
+  <div class="callout-title">Главное</div>
+  Ты не скроешься полностью. Задача — повысить стоимость сбора для того, кто тебя ищет. Каждый дополнительный шаг — фильтр.
+</div>
+
+<footer>
+  <p><strong>OSINT &amp; Doxing — практическое руководство.</strong> Материал носит образовательный характер. Использование методов для преследования, шантажа или причинения вреда — незаконно. Работай в рамках закона и этики.</p>
+  <p style="margin-top:10px">Один файл · ~700 строк · тёмная тема · без внешних зависимостей.</p>
+</footer>
+
+</div>
+</main>
+</div>
+
+<script>
+/* ============ MOBILE MENU ============ */
+const menuToggle = document.getElementById('menuToggle');
+const sidebar = document.getElementById('sidebar');
+const overlay = document.getElementById('overlay');
+menuToggle.addEventListener('click', () => {
+  sidebar.classList.toggle('open');
+  overlay.classList.toggle('show');
+});
+overlay.addEventListener('click', () => {
+  sidebar.classList.remove('open');
+  overlay.classList.remove('show');
+});
+
+/* ============ SCROLL SPY ============ */
+const links = document.querySelectorAll('.nav-link');
+const sections = [...links].map(l => document.getElementById(l.dataset.target));
+
+function updateActive() {
+  let current = sections[0]?.id;
+  const fromTop = window.scrollY + 120;
+  for (const sec of sections) {
+    if (sec && sec.offsetTop <= fromTop) current = sec.id;
+  }
+  links.forEach(l => {
+    l.classList.toggle('active', l.dataset.target === current);
+  });
+}
+window.addEventListener('scroll', updateActive, {passive:true});
+updateActive();
+
+/* ============ SMOOTH NAV ============ */
+links.forEach(l => {
+  l.addEventListener('click', e => {
+    e.preventDefault();
+    const target = document.getElementById(l.dataset.target);
+    if (target) {
+      window.scrollTo({ top: target.offsetTop - 20, behavior: 'smooth' });
+      sidebar.classList.remove('open');
+      overlay.classList.remove('show');
+    }
+  });
+});
+
+/* ============ SEARCH FILTER ============ */
+const searchInput = document.getElementById('searchInput');
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim().toLowerCase();
+  links.forEach(l => {
+    const txt = l.textContent.toLowerCase();
+    l.style.display = (!q || txt.includes(q)) ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-group-label').forEach(label => {
+    const group = label.parentElement;
+    const visible = [...group.querySelectorAll('.nav-link')].some(l => l.style.display !== 'none');
+    label.style.display = visible ? '' : 'none';
+  });
+});
+
+/* ============ ESC CLOSE ============ */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    sidebar.classList.remove('open');
+    overlay.classList.remove('show');
+  }
+});
+</script>
+</body>
+</html>
